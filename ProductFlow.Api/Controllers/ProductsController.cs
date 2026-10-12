@@ -28,6 +28,18 @@ public class ProductsController : ControllerBase
 
         return Ok(products);
     }
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id)
+    {
+        var product = await _dbContext.Products
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product is null)
+            return NotFound();
+
+        return Ok(product);
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create(
@@ -44,9 +56,9 @@ public class ProductsController : ControllerBase
         await _dbContext.SaveChangesAsync();
 
         return CreatedAtAction(
-            nameof(GetAll),
-            new { id = product.Id },
-            product);
+    nameof(GetById),
+    new { id = product.Id },
+    product);
     }
 
 
