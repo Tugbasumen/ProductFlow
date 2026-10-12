@@ -95,5 +95,29 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
+    [HttpPatch("{id:guid}/stock")]
+    public async Task<IActionResult> AdjustStock(
+    Guid id,
+    AdjustStockRequest request)
+    {
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product is null)
+            return NotFound();
+
+        try
+        {
+            product.AdjustStock(request.QuantityChange);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
 
 }
