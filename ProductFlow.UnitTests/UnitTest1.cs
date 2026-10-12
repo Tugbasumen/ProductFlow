@@ -1,6 +1,6 @@
 
 using ProductFlow.Domain.Entities;
-
+using Xunit;
 namespace ProductFlow.UnitTests;
 
 public class ProductTests
@@ -78,5 +78,45 @@ public class ProductTests
         product.Deactivate();
 
         Assert.False(product.IsActive);
+    }
+    [Fact]
+    public void AdjustStock_WhenAddingQuantity_IncreasesStock()
+    {
+        var product = new Product(
+            "PRD-TEST-01",
+            "Test Ürünü",
+            100m,
+            10);
+
+        product.AdjustStock(5);
+
+        Assert.Equal(15, product.StockQuantity);
+    }
+
+    [Fact]
+    public void AdjustStock_WhenRemovingQuantity_DecreasesStock()
+    {
+        var product = new Product(
+            "PRD-TEST-02",
+            "Test Ürünü",
+            100m,
+            10);
+
+        product.AdjustStock(-3);
+
+        Assert.Equal(7, product.StockQuantity);
+    }
+
+    [Fact]
+    public void AdjustStock_WhenQuantityWouldBeNegative_ThrowsException()
+    {
+        var product = new Product(
+            "PRD-TEST-03",
+            "Test Ürünü",
+            100m,
+            2);
+
+        Assert.Throws<InvalidOperationException>(
+            () => product.AdjustStock(-5));
     }
 }
