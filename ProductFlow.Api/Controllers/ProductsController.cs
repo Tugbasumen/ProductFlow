@@ -40,6 +40,26 @@ public class ProductsController : ControllerBase
 
         return Ok(product);
     }
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        UpdateProductRequest request)
+    {
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product is null)
+            return NotFound();
+
+        product.UpdateDetails(
+            request.Name,
+            request.Description,
+            request.Price);
+
+        await _dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
 
     [HttpPost]
     public async Task<IActionResult> Create(
@@ -60,6 +80,20 @@ public class ProductsController : ControllerBase
     new { id = product.Id },
     product);
     }
+    [HttpPatch("{id:guid}/deactivate")]
+    public async Task<IActionResult> Deactivate(Guid id)
+    {
+        var product = await _dbContext.Products
+            .FirstOrDefaultAsync(p => p.Id == id);
 
+        if (product is null)
+            return NotFound();
+
+        product.Deactivate();
+
+        await _dbContext.SaveChangesAsync();
+
+        return NoContent();
+    }
 
 }
