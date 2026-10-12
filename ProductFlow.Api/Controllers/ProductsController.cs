@@ -42,8 +42,8 @@ public class ProductsController : ControllerBase
     }
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(
-        Guid id,
-        UpdateProductRequest request)
+      Guid id,
+      UpdateProductRequest request)
     {
         var product = await _dbContext.Products
             .FirstOrDefaultAsync(p => p.Id == id);
@@ -51,34 +51,46 @@ public class ProductsController : ControllerBase
         if (product is null)
             return NotFound();
 
-        product.UpdateDetails(
-            request.Name,
-            request.Description,
-            request.Price);
+        try
+        {
+            product.UpdateDetails(
+                request.Name,
+                request.Description,
+                request.Price);
 
-        await _dbContext.SaveChangesAsync();
+            await _dbContext.SaveChangesAsync();
 
-        return NoContent();
+            return NoContent();
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
-
     [HttpPost]
-    public async Task<IActionResult> Create(
-        CreateProductRequest request)
+    public async Task<IActionResult> Create(CreateProductRequest request)
     {
-        var product = new Product(
-            request.Code,
-            request.Name,
-            request.Price,
-            request.StockQuantity,
-            request.Description);
+        try
+        {
+            var product = new Product(
+                request.Code,
+                request.Name,
+                request.Price,
+                request.StockQuantity,
+                request.Description);
 
-        _dbContext.Products.Add(product);
-        await _dbContext.SaveChangesAsync();
+            _dbContext.Products.Add(product);
+            await _dbContext.SaveChangesAsync();
 
-        return CreatedAtAction(
-    nameof(GetById),
-    new { id = product.Id },
-    product);
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = product.Id },
+                product);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id)
