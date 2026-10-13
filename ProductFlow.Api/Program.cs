@@ -1,11 +1,14 @@
 using Microsoft.EntityFrameworkCore;
 using ProductFlow.Infrastructure.Persistence;
 using ProductFlow.Api.Middleware;
+using ProductFlow.Application.Interfaces;
+using ProductFlow.Infrastructure.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ProductFlowDbContext>(options =>
 options.UseSqlServer(
 builder.Configuration.GetConnectionString("ProductFlowDatabase")));
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
