@@ -18,10 +18,21 @@ public class ProductFlowDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<Product>(entity =>
-        {
-            entity.Property(p => p.Price)
-                .HasPrecision(18, 2);
-        });
+{
+    entity.Property(p => p.Price)
+        .HasPrecision(18, 2);
+
+    entity.Property(p => p.Code)
+        .HasMaxLength(50)
+        .IsRequired();
+
+    entity.Property(p => p.Name)
+        .HasMaxLength(100)
+        .IsRequired();
+
+    entity.HasIndex(p => p.Code)
+        .IsUnique();
+});
     }
 
 
