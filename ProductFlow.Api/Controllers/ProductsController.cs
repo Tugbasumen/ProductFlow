@@ -1,8 +1,6 @@
-
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using ProductFlow.Application.DTOs;
+using ProductFlow.Application.Exceptions;
 using ProductFlow.Application.Interfaces;
 
 namespace ProductFlow.Api.Controllers;
@@ -23,7 +21,6 @@ public class ProductsController : ControllerBase
         CancellationToken cancellationToken)
     {
         var products = await _productService.GetAllAsync(cancellationToken);
-
         return Ok(products);
     }
 
@@ -58,19 +55,13 @@ public class ProductsController : ControllerBase
                 new { id = product.Id },
                 product);
         }
+        catch (DuplicateProductCodeException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
-        }
-        catch (DbUpdateException ex)
-            when (ex.InnerException is SqlException sqlException
-                  && (sqlException.Number == 2601
-                      || sqlException.Number == 2627))
-        {
-            return Conflict(new
-            {
-                message = "Bu ürün kodu zaten kayıtlı."
-            });
         }
     }
 
@@ -136,4 +127,5 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
+
 }

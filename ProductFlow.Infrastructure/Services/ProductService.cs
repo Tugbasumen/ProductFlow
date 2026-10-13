@@ -1,4 +1,4 @@
-
+using ProductFlow.Application.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Interfaces;
@@ -36,9 +36,22 @@ public sealed class ProductService : IProductService
     }
 
     public async Task<Product> CreateAsync(
-        CreateProductRequest request,
-        CancellationToken cancellationToken = default)
+CreateProductRequest request,
+CancellationToken cancellationToken = default)
     {
+        var normalizedCode = request.Code.Trim().ToUpperInvariant();
+
+
+        var codeExists = await _dbContext.Products
+            .AnyAsync(
+                product => product.Code == normalizedCode,
+                cancellationToken);
+
+        if (codeExists)
+        {
+            throw new DuplicateProductCodeException();
+        }
+
         var product = new Product(
             request.Code,
             request.Name,
@@ -47,11 +60,13 @@ public sealed class ProductService : IProductService
             request.Description);
 
         _dbContext.Products.Add(product);
-
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return product;
+
+
     }
+
 
     public async Task<bool> UpdateAsync(
         Guid id,
