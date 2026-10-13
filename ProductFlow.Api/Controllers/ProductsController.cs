@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Domain.Entities;
 using ProductFlow.Infrastructure.Persistence;
-
+using Microsoft.Data.SqlClient;
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
@@ -70,27 +70,43 @@ public class ProductsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateProductRequest request)
     {
+        Product product;
+
         try
         {
-            var product = new Product(
+            product = new Product(
                 request.Code,
                 request.Name,
                 request.Price,
                 request.StockQuantity,
                 request.Description);
-
-            _dbContext.Products.Add(product);
-            await _dbContext.SaveChangesAsync();
-
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = product.Id },
-                product);
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
+
+        _dbContext.Products.Add(product);
+
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is SqlException sqlException
+                  && (sqlException.Number == 2601
+                      || sqlException.Number == 2627))
+        {
+            return Conflict(new
+            {
+                message = "Bu ürün kodu zaten kayıtlı."
+            });
+        }
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = product.Id },
+            product);
     }
     [HttpPatch("{id:guid}/deactivate")]
     public async Task<IActionResult> Deactivate(Guid id)
