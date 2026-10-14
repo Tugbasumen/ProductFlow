@@ -9,6 +9,7 @@ builder.Services.AddDbContext<ProductFlowDbContext>(options =>
 options.UseSqlServer(
 builder.Configuration.GetConnectionString("ProductFlowDatabase")));
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
