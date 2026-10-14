@@ -144,9 +144,73 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
 
     }
+    [Fact]
+    public async Task CreateProduct_WithEmptyName_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var request = new
+        {
+            Code = "TEST-INVALID-001",
+            Name = "",
+            Description = "Geçersiz ürün",
+            Price = 100m,
+            StockQuantity = 5
+        };
+
+        var response = await client.PostAsJsonAsync(
+            "/api/products", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    }
+    [Fact]
+    public async Task CreateProduct_WithNegativePrice_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var request = new
+        {
+            Code = "TEST-INVALID-002",
+            Name = "Geçersiz Fiyatlı Ürün",
+            Description = "Negatif fiyat testi",
+            Price = -100m,
+            StockQuantity = 5
+        };
+
+        var response = await client.PostAsJsonAsync(
+            "/api/products", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    }
+
+    [Fact]
+    public async Task CreateProduct_WithNegativeStock_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
 
 
+        using var client = _factory.CreateClient();
 
+        var request = new
+        {
+            Code = "TEST-INVALID-003",
+            Name = "Negatif Stoklu Ürün",
+            Description = "Negatif stok testi",
+            Price = 100m,
+            StockQuantity = -5
+        };
 
+        var response = await client.PostAsJsonAsync(
+            "/api/products", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    }
 
 }
