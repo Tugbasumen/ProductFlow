@@ -2,14 +2,15 @@ name: ProductFlow CI
 
 on:
 push:
-branches: [ "main" ]
+branches:
+- main
 pull_request:
-branches: [ "main" ]
+branches:
+- main
 
 jobs:
 build-and-test:
 runs-on: ubuntu-latest
-
 
 steps:
   - name: Repository'yi indir
@@ -28,4 +29,3 @@ steps:
 
   - name: Testleri çalıştır
     run: dotnet test --no-build --configuration Release
-
