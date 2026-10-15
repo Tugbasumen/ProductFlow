@@ -388,11 +388,166 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetAll_WithSearchByName_ReturnsMatchingProducts()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var request = new
+        {
+            Code = "SEARCH-NAME-001",
+            Name = "Kablosuz Oyuncu Mouse",
+            Description = "Arama testi",
+            Price = 450m,
+            StockQuantity = 8,
+            CategoryId = categoryId
+        };
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/products", request);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var response = await client.GetAsync(
+            "/api/products?search=Oyuncu");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(result);
+        Assert.Contains(
+            result.Items,
+            p => p.Name == "Kablosuz Oyuncu Mouse");
+    }
+
+    [Fact]
+    public async Task GetAll_WithSearchByCode_ReturnsMatchingProducts()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var request = new
+        {
+            Code = "SEARCH-CODE-XYZ",
+            Name = "Test Ürünü",
+            Description = "Kod arama testi",
+            Price = 150m,
+            StockQuantity = 4,
+            CategoryId = categoryId
+        };
+
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/products", request);
+
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var response = await client.GetAsync(
+            "/api/products?search=CODE-XYZ");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(result);
+        Assert.Contains(
+            result.Items,
+            p => p.Code == "SEARCH-CODE-XYZ");
+    }
+
+    [Fact]
+    public async Task GetAll_WithSearchWithoutMatches_ReturnsEmptyList()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/products?search=NO-MATCH-987654");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result.Items);
+        Assert.Equal(0, result.TotalCount);
+        Assert.Equal(0, result.TotalPages);
+    }
+
+    [Fact]
+    public async Task GetAll_WithCategoryIdAndSearch_ReturnsMatchingProducts()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var matchingRequest = new
+        {
+            Code = "COMBINED-001",
+            Name = "Mekanik Klavye",
+            Description = "Kategori ve arama testi",
+            Price = 800m,
+            StockQuantity = 6,
+            CategoryId = categoryId
+        };
+
+        var otherRequest = new
+        {
+            Code = "COMBINED-002",
+            Name = "Mekanik Mouse",
+            Description = "Kategori ve arama testi",
+            Price = 500m,
+            StockQuantity = 3,
+            CategoryId = categoryId
+        };
+
+        var firstCreateResponse = await client.PostAsJsonAsync(
+            "/api/products", matchingRequest);
+
+        var secondCreateResponse = await client.PostAsJsonAsync(
+            "/api/products", otherRequest);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            firstCreateResponse.StatusCode);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            secondCreateResponse.StatusCode);
+
+        var response = await client.GetAsync(
+            $"/api/products?categoryId={categoryId}&search=Klavye");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(result);
+        Assert.Single(result.Items);
+        Assert.Equal("COMBINED-001", result.Items[0].Code);
+        Assert.Equal("Mekanik Klavye", result.Items[0].Name);
+        Assert.Equal(1, result.TotalCount);
+    }
+
+
     private sealed class FilteredProductResponse
     {
         public Guid CategoryId { get; set; }
 
         public string Code { get; set; } = string.Empty;
+
+        public string Name { get; set; } = string.Empty;
     }
 
     private sealed class PagedProductResponse

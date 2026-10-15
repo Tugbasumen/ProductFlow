@@ -20,6 +20,7 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] Guid? categoryId,
+        [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
         CancellationToken cancellationToken = default)
@@ -42,6 +43,7 @@ public class ProductsController : ControllerBase
 
         var result = await _productService.GetAllAsync(
             categoryId,
+            search,
             page,
             pageSize,
             cancellationToken);

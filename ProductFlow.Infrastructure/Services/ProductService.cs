@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Exceptions;
@@ -17,11 +16,9 @@ public sealed class ProductService : IProductService
         _dbContext = dbContext;
     }
 
-
-
-
     public async Task<PagedResult<Product>> GetAllAsync(
         Guid? categoryId = null,
+        string? search = null,
         int page = 1,
         int pageSize = 10,
         CancellationToken cancellationToken = default)
@@ -29,7 +26,8 @@ public sealed class ProductService : IProductService
         if (page < 1)
         {
             throw new ArgumentOutOfRangeException(
-                nameof(page), "Sayfa numarası en az 1 olmalıdır.");
+                nameof(page),
+                "Sayfa numarası en az 1 olmalıdır.");
         }
 
         if (pageSize < 1 || pageSize > 100)
@@ -47,6 +45,15 @@ public sealed class ProductService : IProductService
         {
             query = query.Where(
                 product => product.CategoryId == categoryId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.Trim();
+
+            query = query.Where(product =>
+                product.Name.Contains(search) ||
+                product.Code.Contains(search));
         }
 
         var totalCount = await query.CountAsync(cancellationToken);
@@ -68,14 +75,12 @@ public sealed class ProductService : IProductService
         };
     }
 
-
-
-
     public async Task<Product?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default)
     {
         return await _dbContext.Products
+            .Include(product => product.Category)
             .FirstOrDefaultAsync(
                 product => product.Id == id,
                 cancellationToken);

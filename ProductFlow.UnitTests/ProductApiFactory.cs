@@ -35,6 +35,7 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
         });
     }
 
+
     public async Task InitializeDatabaseAsync()
     {
         using var scope = Services.CreateScope();
@@ -44,13 +45,21 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
 
         await dbContext.Database.EnsureCreatedAsync();
 
-        if (!await dbContext.Categories.AnyAsync())
-        {
-            dbContext.Categories.Add(
-                new Category("Test Kategorisi", "API testleri için"));
+        // Önceki testlerden kalan ürünleri temizle.
+        var existingProducts = await dbContext.Products.ToListAsync();
+        dbContext.Products.RemoveRange(existingProducts);
 
-            await dbContext.SaveChangesAsync();
-        }
+        // Kategorileri de temizle.
+        var existingCategories = await dbContext.Categories.ToListAsync();
+        dbContext.Categories.RemoveRange(existingCategories);
+
+        await dbContext.SaveChangesAsync();
+
+        // Her test için kategoriyi yeniden oluştur.
+        dbContext.Categories.Add(
+            new Category("Test Kategorisi", "API testleri için"));
+
+        await dbContext.SaveChangesAsync();
     }
 
     protected override void Dispose(bool disposing)
