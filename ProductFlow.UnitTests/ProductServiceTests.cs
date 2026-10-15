@@ -200,4 +200,56 @@ public class ProductServiceTests
         Assert.Equal(200m, product.Price);
         Assert.Equal(5, product.StockQuantity);
     }
+
+    [Fact]
+    public async Task GetCriticalStockAsync_ReturnsOnlyActiveProductsAtOrBelowMinimum()
+    {
+        using var dbContext = CreateDbContext();
+        var category = CreateCategory();
+        dbContext.Categories.Add(category);
+
+        var critical = new Product(
+            "PRD-CRIT", "Kritik Mouse", 100m, 2, category.Id, null, 5);
+        var healthy = new Product(
+            "PRD-OK", "Yeterli Stok", 100m, 20, category.Id, null, 5);
+        var inactive = new Product(
+            "PRD-OFF", "Pasif Kritik", 100m, 1, category.Id, null, 5);
+        inactive.Deactivate();
+
+        dbContext.Products.AddRange(critical, healthy, inactive);
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+        var result = await service.GetCriticalStockAsync();
+
+        Assert.Single(result);
+        Assert.Equal("PRD-CRIT", result[0].Code);
+        Assert.True(result[0].IsCriticalStock);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithMinimumStockLevel_PersistsThreshold()
+    {
+        using var dbContext = CreateDbContext();
+        var category = CreateCategory();
+        dbContext.Categories.Add(category);
+        await dbContext.SaveChangesAsync();
+
+        var service = CreateService(dbContext);
+
+        var request = new CreateProductRequest
+        {
+            Code = "PRD-MIN",
+            Name = "Eşikli Ürün",
+            Price = 50m,
+            StockQuantity = 3,
+            MinimumStockLevel = 8,
+            CategoryId = category.Id
+        };
+
+        var result = await service.CreateAsync(request);
+
+        Assert.Equal(8, result.MinimumStockLevel);
+        Assert.True(result.IsCriticalStock);
+    }
 }

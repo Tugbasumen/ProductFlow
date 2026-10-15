@@ -692,6 +692,53 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetCriticalStock_ReturnsOnlyProductsAtOrBelowMinimum()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var criticalResponse = await client.PostAsJsonAsync(
+            "/api/products",
+            new
+            {
+                Code = "CRIT-001",
+                Name = "Kritik Stok Ürünü",
+                Price = 100m,
+                StockQuantity = 2,
+                MinimumStockLevel = 5,
+                CategoryId = categoryId
+            });
+
+        var healthyResponse = await client.PostAsJsonAsync(
+            "/api/products",
+            new
+            {
+                Code = "CRIT-002",
+                Name = "Yeterli Stok Ürünü",
+                Price = 100m,
+                StockQuantity = 20,
+                MinimumStockLevel = 5,
+                CategoryId = categoryId
+            });
+
+        Assert.Equal(HttpStatusCode.Created, criticalResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, healthyResponse.StatusCode);
+
+        var response = await client.GetAsync("/api/products/critical-stock");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var products = await response.Content
+            .ReadFromJsonAsync<List<FilteredProductResponse>>();
+
+        Assert.NotNull(products);
+        Assert.Contains(products, p => p.Code == "CRIT-001");
+        Assert.DoesNotContain(products, p => p.Code == "CRIT-002");
+    }
+
     private sealed class FilteredProductResponse
     {
         public Guid CategoryId { get; set; }

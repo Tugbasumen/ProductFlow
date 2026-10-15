@@ -78,7 +78,9 @@ namespace ProductFlow.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<int>("MinimumStockLevel")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(5);
 
                     b.Property<string>("Name")
                         .IsRequired()
