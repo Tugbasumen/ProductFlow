@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: productflow-db
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - productflow_mssql:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: ProductFlow.Api/Dockerfile
+    container_name: productflow-api
+    depends_on:
+      - db
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__ProductFlowDatabase: "Server=db;Database=ProductFlowDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+    ports:
+      - "8080:8080"
+
+volumes:
+  productflow_mssql:

@@ -71,6 +71,26 @@ ProductFlow, ürün ve stok yönetimi süreçlerini yönetmek için geliştirile
 
 6. Uygulama çalışırken konsolda belirtilen adres üzerinden Swagger arayüzüne erişin.
 
+### Docker ile çalıştırma
+
+Aynı ortamı hızlıca yeniden üretebilmek için Docker Compose kullanılabilir:
+
+```bash
+docker compose up --build
+```
+
+Bu komut:
+
+- SQL Server konteynerini başlatır
+- API uygulamasını derleyip çalıştırır
+- `http://localhost:8080/swagger` adresinden Swagger erişimini açar
+
+Açık SQL Server bağlantı dizesi:
+
+```text
+Server=db;Database=ProductFlowDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+```
+
 ## API uç noktaları
 
 | Metot | Uç nokta                        | Açıklama                   |
