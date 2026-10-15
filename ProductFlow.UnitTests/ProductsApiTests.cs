@@ -1,6 +1,11 @@
+
+using System;
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using ProductFlow.Infrastructure.Persistence;
 
 namespace ProductFlow.UnitTests;
 
@@ -8,10 +13,22 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
 {
     private readonly ProductApiFactory _factory;
 
-
     public ProductsApiTests(ProductApiFactory factory)
     {
         _factory = factory;
+    }
+
+    private async Task<Guid> GetTestCategoryIdAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+
+        var dbContext = scope.ServiceProvider
+            .GetRequiredService<ProductFlowDbContext>();
+
+        var category = await dbContext.Categories
+            .FirstAsync(c => c.Name == "Test Kategorisi");
+
+        return category.Id;
     }
 
     [Fact]
@@ -25,10 +42,12 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
+
     [Fact]
     public async Task CreateProduct_WithValidRequest_ReturnsCreated()
     {
         await _factory.InitializeDatabaseAsync();
+        var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
 
@@ -38,19 +57,21 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             Name = "Test Mouse",
             Description = "Entegrasyon testi ürünü",
             Price = 250.50m,
-            StockQuantity = 10
+            StockQuantity = 10,
+            CategoryId = categoryId
         };
 
         var response = await client.PostAsJsonAsync("/api/products", request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
-
     }
+
     [Fact]
     public async Task GetById_WhenProductExists_ReturnsProduct()
     {
         await _factory.InitializeDatabaseAsync();
+        var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
 
@@ -60,10 +81,12 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             Name = "Test Keyboard",
             Description = "Klavye test ürünü",
             Price = 500m,
-            StockQuantity = 5
+            StockQuantity = 5,
+            CategoryId = categoryId
         };
 
-        var createResponse = await client.PostAsJsonAsync("/api/products", request);
+        var createResponse = await client.PostAsJsonAsync(
+            "/api/products", request);
 
         Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
 
@@ -82,7 +105,6 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal("Test Keyboard", product.Name);
         Assert.Equal(500m, product.Price);
         Assert.Equal(5, product.StockQuantity);
-
     }
 
     private sealed class ProductResponse
@@ -92,6 +114,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         public decimal Price { get; set; }
         public int StockQuantity { get; set; }
     }
+
     [Fact]
     public async Task GetById_WhenProductDoesNotExist_ReturnsNotFound()
     {
@@ -105,13 +128,13 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             $"/api/products/{nonExistingId}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-
     }
+
     [Fact]
     public async Task CreateProduct_WithDuplicateCode_ReturnsConflict()
     {
         await _factory.InitializeDatabaseAsync();
-
+        var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
 
@@ -121,7 +144,8 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             Name = "İlk Ürün",
             Description = "İlk kayıt",
             Price = 100m,
-            StockQuantity = 5
+            StockQuantity = 5,
+            CategoryId = categoryId
         };
 
         var firstResponse = await client.PostAsJsonAsync(
@@ -135,15 +159,16 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             Name = "İkinci Ürün",
             Description = "Tekrarlanan kod",
             Price = 200m,
-            StockQuantity = 10
+            StockQuantity = 10,
+            CategoryId = categoryId
         };
 
         var secondResponse = await client.PostAsJsonAsync(
             "/api/products", secondRequest);
 
         Assert.Equal(HttpStatusCode.Conflict, secondResponse.StatusCode);
-
     }
+
     [Fact]
     public async Task CreateProduct_WithEmptyName_ReturnsBadRequest()
     {
@@ -164,8 +189,8 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             "/api/products", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
     }
+
     [Fact]
     public async Task CreateProduct_WithNegativePrice_ReturnsBadRequest()
     {
@@ -186,14 +211,12 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             "/api/products", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
     }
 
     [Fact]
     public async Task CreateProduct_WithNegativeStock_ReturnsBadRequest()
     {
         await _factory.InitializeDatabaseAsync();
-
 
         using var client = _factory.CreateClient();
 
@@ -210,7 +233,5 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             "/api/products", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-
     }
-
 }

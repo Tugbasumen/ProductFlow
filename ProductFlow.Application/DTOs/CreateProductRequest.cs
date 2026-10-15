@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace ProductFlow.Application.DTOs;
@@ -15,9 +16,12 @@ public sealed class CreateProductRequest
     [StringLength(500)]
     public string? Description { get; init; }
 
-    [Range(0, 9999999999999999.99)]
+    [Range(typeof(decimal), "0", "9999999999999999")]
     public decimal Price { get; init; }
 
     [Range(0, int.MaxValue)]
     public int StockQuantity { get; init; }
+
+    [Required]
+    public Guid CategoryId { get; init; }
 }

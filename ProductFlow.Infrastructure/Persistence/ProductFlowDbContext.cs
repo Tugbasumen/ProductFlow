@@ -1,4 +1,3 @@
-
 using Microsoft.EntityFrameworkCore;
 using ProductFlow.Domain.Entities;
 
@@ -35,6 +34,11 @@ public class ProductFlowDbContext : DbContext
 
             entity.HasIndex(p => p.Code)
                 .IsUnique();
+
+            entity.HasOne(p => p.Category)
+                .WithMany()
+                .HasForeignKey(p => p.CategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Category>(entity =>

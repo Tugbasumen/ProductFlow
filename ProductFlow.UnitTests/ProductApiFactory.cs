@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -5,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using ProductFlow.Domain.Entities;
 using ProductFlow.Infrastructure.Persistence;
 
 namespace ProductFlow.UnitTests;
@@ -24,15 +26,13 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
 
         builder.ConfigureTestServices(services =>
-{
-    services.RemoveAll<DbContextOptions<ProductFlowDbContext>>();
-    services.RemoveAll<ProductFlowDbContext>();
+        {
+            services.RemoveAll<DbContextOptions<ProductFlowDbContext>>();
+            services.RemoveAll<ProductFlowDbContext>();
 
-    services.AddDbContext<ProductFlowDbContext>(options =>
-        options.UseSqlite(_connection));
-
-});
-
+            services.AddDbContext<ProductFlowDbContext>(options =>
+                options.UseSqlite(_connection));
+        });
     }
 
     public async Task InitializeDatabaseAsync()
@@ -44,8 +44,14 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
 
         await dbContext.Database.EnsureCreatedAsync();
 
-    }
+        if (!await dbContext.Categories.AnyAsync())
+        {
+            dbContext.Categories.Add(
+                new Category("Test Kategorisi", "API testleri için"));
 
+            await dbContext.SaveChangesAsync();
+        }
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -56,6 +62,4 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
             _connection.Dispose();
         }
     }
-
-
 }

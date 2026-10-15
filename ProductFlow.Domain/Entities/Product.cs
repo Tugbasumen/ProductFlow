@@ -4,6 +4,8 @@ namespace ProductFlow.Domain.Entities;
 public class Product
 {
     public Guid Id { get; private set; }
+    public Guid CategoryId { get; private set; }
+    public Category Category { get; private set; } = null!;
 
     public string Code { get; private set; } = string.Empty;
 
@@ -25,11 +27,12 @@ public class Product
     }
 
     public Product(
-        string code,
-        string name,
-        decimal price,
-        int stockQuantity,
-        string? description = null)
+    string code,
+    string name,
+    decimal price,
+    int stockQuantity,
+    Guid categoryId,
+    string? description = null)
     {
         if (string.IsNullOrWhiteSpace(code))
             throw new ArgumentException("Ürün kodu boş olamaz.", nameof(code));
@@ -51,6 +54,7 @@ public class Product
         Description = description?.Trim();
         Price = price;
         StockQuantity = stockQuantity;
+        CategoryId = categoryId;
     }
 
     public void UpdateDetails(

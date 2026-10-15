@@ -35,12 +35,12 @@ public sealed class ProductService : IProductService
                 cancellationToken);
     }
 
+
     public async Task<Product> CreateAsync(
-CreateProductRequest request,
-CancellationToken cancellationToken = default)
+        CreateProductRequest request,
+        CancellationToken cancellationToken = default)
     {
         var normalizedCode = request.Code.Trim().ToUpperInvariant();
-
 
         var codeExists = await _dbContext.Products
             .AnyAsync(
@@ -52,19 +52,29 @@ CancellationToken cancellationToken = default)
             throw new DuplicateProductCodeException();
         }
 
+        var categoryExists = await _dbContext.Categories
+            .AnyAsync(
+                category => category.Id == request.CategoryId,
+                cancellationToken);
+
+        if (!categoryExists)
+        {
+            throw new InvalidOperationException(
+                "Belirtilen kategori bulunamadı.");
+        }
+
         var product = new Product(
             request.Code,
             request.Name,
             request.Price,
             request.StockQuantity,
+            request.CategoryId,
             request.Description);
 
         _dbContext.Products.Add(product);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return product;
-
-
     }
 
 
