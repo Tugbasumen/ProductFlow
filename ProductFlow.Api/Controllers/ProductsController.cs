@@ -171,6 +171,10 @@ public class ProductsController : ControllerBase
 
             return NoContent();
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
         catch (InvalidOperationException ex)
         {
             return BadRequest(new { message = ex.Message });

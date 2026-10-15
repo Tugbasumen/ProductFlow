@@ -16,6 +16,12 @@ public class ProductFlowDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
+    public DbSet<Customer> Customers => Set<Customer>();
+
+    public DbSet<Order> Orders => Set<Order>();
+
+    public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -87,5 +93,70 @@ public class ProductFlowDbContext : DbContext
         movement.CreatedAtUtc
     });
 });
+
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.HasKey(customer => customer.Id);
+
+            entity.Property(customer => customer.Name)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(customer => customer.Email)
+                .HasMaxLength(200)
+                .IsRequired();
+
+            entity.Property(customer => customer.Phone)
+                .HasMaxLength(20);
+
+            entity.HasIndex(customer => customer.Email)
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.HasKey(order => order.Id);
+
+            entity.Property(order => order.Status)
+                .HasConversion<int>()
+                .IsRequired();
+
+            entity.Ignore(order => order.TotalAmount);
+
+            entity.HasOne(order => order.Customer)
+                .WithMany()
+                .HasForeignKey(order => order.CustomerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasMany(order => order.Items)
+                .WithOne(item => item.Order)
+                .HasForeignKey(item => item.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Navigation(order => order.Items)
+                .HasField("_items")
+                .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            entity.HasIndex(order => new
+            {
+                order.CustomerId,
+                order.CreatedAtUtc
+            });
+        });
+
+        modelBuilder.Entity<OrderItem>(entity =>
+        {
+            entity.HasKey(item => item.Id);
+
+            entity.Property(item => item.UnitPrice)
+                .HasPrecision(18, 2);
+
+            entity.Ignore(item => item.LineTotal);
+
+            entity.HasOne(item => item.Product)
+                .WithMany()
+                .HasForeignKey(item => item.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 }

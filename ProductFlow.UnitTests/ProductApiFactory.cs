@@ -52,6 +52,12 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
 
         await dbContext.Database.EnsureCreatedAsync();
 
+        var existingOrders = await dbContext.Orders.ToListAsync();
+        dbContext.Orders.RemoveRange(existingOrders);
+
+        var existingCustomers = await dbContext.Customers.ToListAsync();
+        dbContext.Customers.RemoveRange(existingCustomers);
+
         var existingMovements = await dbContext.StockMovements.ToListAsync();
         dbContext.StockMovements.RemoveRange(existingMovements);
 

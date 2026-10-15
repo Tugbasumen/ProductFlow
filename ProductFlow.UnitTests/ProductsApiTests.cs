@@ -165,6 +165,35 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
     }
 
     [Fact]
+    public async Task AdjustStock_WithZeroQuantity_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var createResponse = await client.PostAsJsonAsync("/api/products", new
+        {
+            Code = "STOCK-ZERO-001",
+            Name = "Sıfır Miktar Ürünü",
+            Description = "Test ürünü",
+            Price = 100m,
+            StockQuantity = 10,
+            CategoryId = categoryId
+        });
+
+        createResponse.EnsureSuccessStatusCode();
+        var createdProduct = await createResponse.Content
+            .ReadFromJsonAsync<CreatedProductResponse>();
+
+        var response = await client.PatchAsync(
+            $"/api/products/{createdProduct!.Id}/stock",
+            JsonContent.Create(new { QuantityChange = 0 }));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetAll_WithSecondPage_ReturnsRequestedPage()
     {
         await _factory.InitializeDatabaseAsync();
@@ -770,5 +799,10 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         public decimal Price { get; set; }
 
         public int StockQuantity { get; set; }
+    }
+
+    private sealed class CreatedProductResponse
+    {
+        public Guid Id { get; set; }
     }
 }
