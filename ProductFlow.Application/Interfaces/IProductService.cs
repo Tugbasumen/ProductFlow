@@ -9,12 +9,13 @@ namespace ProductFlow.Application.Interfaces;
 public interface IProductService
 {
     Task<PagedResult<Product>> GetAllAsync(
-        Guid? categoryId = null,
-        string? search = null,
-        int page = 1,
-        int pageSize = 10,
-        CancellationToken cancellationToken = default);
-
+    Guid? categoryId = null,
+    string? search = null,
+    int page = 1,
+    int pageSize = 10,
+    string sortBy = "name",
+    string sortOrder = "asc",
+    CancellationToken cancellationToken = default);
     Task<Product?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken = default);

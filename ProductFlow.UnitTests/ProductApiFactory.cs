@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using ProductFlow.Domain.Entities;
 using ProductFlow.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 
 namespace ProductFlow.UnitTests;
 
@@ -24,6 +25,12 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+
+        builder.ConfigureLogging(logging =>
+        {
+            logging.AddConsole();
+            logging.SetMinimumLevel(LogLevel.Error);
+        });
 
         builder.ConfigureTestServices(services =>
         {

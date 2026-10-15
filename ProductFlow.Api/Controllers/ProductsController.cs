@@ -3,7 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Exceptions;
 using ProductFlow.Application.Interfaces;
-
+using System;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
@@ -23,6 +26,8 @@ public class ProductsController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
+        [FromQuery] string sortBy = "name",
+        [FromQuery] string sortOrder = "asc",
         CancellationToken cancellationToken = default)
     {
         if (page < 1)
@@ -41,11 +46,33 @@ public class ProductsController : ControllerBase
             });
         }
 
+        if (string.IsNullOrWhiteSpace(sortBy) ||
+            !(new[] { "name", "price", "stockquantity" }
+                .Contains(sortBy.Trim(), StringComparer.OrdinalIgnoreCase)))
+        {
+            return BadRequest(new
+            {
+                message = "Sıralama alanı name, price veya stockQuantity olmalıdır."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(sortOrder) ||
+            !(new[] { "asc", "desc" }
+                .Contains(sortOrder.Trim(), StringComparer.OrdinalIgnoreCase)))
+        {
+            return BadRequest(new
+            {
+                message = "Sıralama yönü asc veya desc olmalıdır."
+            });
+        }
+
         var result = await _productService.GetAllAsync(
             categoryId,
             search,
             page,
             pageSize,
+            sortBy,
+            sortOrder,
             cancellationToken);
 
         return Ok(result);

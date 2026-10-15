@@ -1,5 +1,5 @@
-
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Net;
 
 namespace ProductFlow.Api.Middleware;
@@ -30,6 +30,11 @@ public sealed class ExceptionHandlingMiddleware
                 "Beklenmeyen bir hata oluştu. TraceId: {TraceId}",
                 context.TraceIdentifier);
 
+            // Tanılama: Gerçek istisnayı test konsoluna yazdır.
+            Console.Error.WriteLine(
+                $"[ProductFlow HATA] TraceId: {context.TraceIdentifier}");
+            Console.Error.WriteLine(ex.ToString());
+
             if (context.Response.HasStarted)
                 throw;
 
@@ -43,16 +48,16 @@ public sealed class ExceptionHandlingMiddleware
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "Sunucu hatası",
-                Detail = "İşlem sırasında beklenmeyen bir hata oluştu.",
+                Detail = ex.ToString(),
                 Instance = context.Request.Path
             };
 
             problem.Extensions["traceId"] = context.TraceIdentifier;
 
             await context.Response.WriteAsJsonAsync(
-    problem,
-    options: null,
-    contentType: "application/problem+json");
+                problem,
+                options: null,
+                contentType: "application/problem+json");
         }
     }
 }

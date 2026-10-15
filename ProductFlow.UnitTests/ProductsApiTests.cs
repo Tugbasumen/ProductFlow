@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using ProductFlow.Infrastructure.Persistence;
@@ -93,6 +93,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.NotNull(products);
         Assert.Contains(products.Items, p => p.Code == "FILTER-001");
         Assert.Contains(products.Items, p => p.Code == "FILTER-002");
+
         Assert.All(
             products.Items,
             p => Assert.Equal(categoryId, p.CategoryId));
@@ -122,6 +123,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(0, products.TotalCount);
         Assert.Equal(0, products.TotalPages);
     }
+
     [Fact]
     public async Task GetAll_WithPageSize_ReturnsPaginationMetadata()
     {
@@ -142,8 +144,10 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(2, result.PageSize);
         Assert.True(result.Items.Count <= 2);
         Assert.True(result.TotalCount >= result.Items.Count);
+
         Assert.Equal(
-            (int)Math.Ceiling((double)result.TotalCount / result.PageSize),
+            (int)Math.Ceiling(
+                (double)result.TotalCount / result.PageSize),
             result.TotalPages);
     }
 
@@ -159,6 +163,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
     [Fact]
     public async Task GetAll_WithSecondPage_ReturnsRequestedPage()
     {
@@ -540,6 +545,152 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(1, result.TotalCount);
     }
 
+    [Fact]
+    public async Task GetAll_SortByPriceAscending_ReturnsProductsInPriceOrder()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var expensiveProduct = new
+        {
+            Code = "SORT-PRICE-002",
+            Name = "Pahalı Ürün",
+            Description = "Sıralama testi",
+            Price = 900m,
+            StockQuantity = 5,
+            CategoryId = categoryId
+        };
+
+        var cheapProduct = new
+        {
+            Code = "SORT-PRICE-001",
+            Name = "Ucuz Ürün",
+            Description = "Sıralama testi",
+            Price = 100m,
+            StockQuantity = 5,
+            CategoryId = categoryId
+        };
+
+        var expensiveResponse = await client.PostAsJsonAsync(
+            "/api/products", expensiveProduct);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            expensiveResponse.StatusCode);
+
+        var cheapResponse = await client.PostAsJsonAsync(
+            "/api/products", cheapProduct);
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            cheapResponse.StatusCode);
+
+        var response = await client.GetAsync(
+            "/api/products?search=SORT-PRICE&sortBy=price&sortOrder=asc");
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        Console.WriteLine($"Sıralama HTTP durumu: {response.StatusCode}");
+        Console.WriteLine($"Sıralama yanıtı: {responseBody}");
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            $"Fiyat sıralaması başarısız. HTTP: {response.StatusCode}. " +
+            $"Yanıt: {responseBody}");
+
+        var result = JsonSerializer.Deserialize<PagedProductResponse>(
+            responseBody,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("SORT-PRICE-001", result.Items[0].Code);
+        Assert.Equal("SORT-PRICE-002", result.Items[1].Code);
+    }
+
+    [Fact]
+    public async Task GetAll_SortByPriceDescending_ReturnsProductsInPriceOrder()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+        using var client = _factory.CreateClient();
+
+        var products = new[]
+        {
+            new
+            {
+                Code = "SORT-DESC-001",
+                Name = "Ucuz Ürün",
+                Description = "Sıralama testi",
+                Price = 100m,
+                StockQuantity = 5,
+                CategoryId = categoryId
+            },
+            new
+            {
+                Code = "SORT-DESC-002",
+                Name = "Pahalı Ürün",
+                Description = "Sıralama testi",
+                Price = 900m,
+                StockQuantity = 5,
+                CategoryId = categoryId
+            }
+        };
+
+        foreach (var product in products)
+        {
+            var createResponse = await client.PostAsJsonAsync(
+                "/api/products", product);
+
+            Assert.Equal(
+                HttpStatusCode.Created,
+                createResponse.StatusCode);
+        }
+
+        var response = await client.GetAsync(
+            "/api/products?search=SORT-DESC&sortBy=price&sortOrder=desc");
+
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        Console.WriteLine($"Sıralama HTTP durumu: {response.StatusCode}");
+        Console.WriteLine($"Sıralama yanıtı: {responseBody}");
+
+        Assert.True(
+            response.StatusCode == HttpStatusCode.OK,
+            $"Fiyat sıralaması başarısız. HTTP: {response.StatusCode}. " +
+            $"Yanıt: {responseBody}");
+
+        var result = JsonSerializer.Deserialize<PagedProductResponse>(
+            responseBody,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("SORT-DESC-002", result.Items[0].Code);
+        Assert.Equal("SORT-DESC-001", result.Items[1].Code);
+    }
+
+    [Fact]
+    public async Task GetAll_WithInvalidSortBy_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/products?sortBy=invalid");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 
     private sealed class FilteredProductResponse
     {

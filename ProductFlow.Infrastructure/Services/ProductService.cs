@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Exceptions;
@@ -21,6 +26,8 @@ public sealed class ProductService : IProductService
         string? search = null,
         int page = 1,
         int pageSize = 10,
+        string sortBy = "name",
+        string sortOrder = "asc",
         CancellationToken cancellationToken = default)
     {
         if (page < 1)
@@ -37,9 +44,25 @@ public sealed class ProductService : IProductService
                 "Sayfa boyutu 1 ile 100 arasında olmalıdır.");
         }
 
-        var query = _dbContext.Products
-            .AsNoTracking()
-            .AsQueryable();
+        sortBy = (sortBy ?? "name").Trim().ToLowerInvariant();
+        sortOrder = (sortOrder ?? "asc").Trim().ToLowerInvariant();
+
+        if (sortBy is not ("name" or "price" or "stockquantity"))
+        {
+            throw new ArgumentException(
+                "Sıralama alanı name, price veya stockQuantity olmalıdır.",
+                nameof(sortBy));
+        }
+
+        if (sortOrder is not ("asc" or "desc"))
+        {
+            throw new ArgumentException(
+                "Sıralama yönü asc veya desc olmalıdır.",
+                nameof(sortOrder));
+        }
+
+        IQueryable<Product> query = _dbContext.Products
+            .AsNoTracking();
 
         if (categoryId.HasValue)
         {
@@ -58,13 +81,61 @@ public sealed class ProductService : IProductService
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .Include(product => product.Category)
-            .OrderBy(product => product.Name)
-            .ThenBy(product => product.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync(cancellationToken);
+        var isSqlite =
+            _dbContext.Database.ProviderName ==
+            "Microsoft.EntityFrameworkCore.Sqlite";
+
+        List<Product> items;
+
+        if (isSqlite && sortBy == "price")
+        {
+            // SQLite, decimal türündeki ORDER BY işlemini desteklemez.
+            // Bu dal test verileri için fiyat sıralamasını bellekte yapar.
+            var products = await query
+                .Include(product => product.Category)
+                .ToListAsync(cancellationToken);
+
+            IOrderedEnumerable<Product> orderedProducts =
+                sortOrder == "asc"
+                    ? products.OrderBy(product => product.Price)
+                    : products.OrderByDescending(product => product.Price);
+
+            items = orderedProducts
+                .ThenBy(product => product.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
+        else
+        {
+            IOrderedQueryable<Product> orderedQuery = sortBy switch
+            {
+                "price" when sortOrder == "asc" =>
+                    query.OrderBy(product => product.Price),
+
+                "price" =>
+                    query.OrderByDescending(product => product.Price),
+
+                "stockquantity" when sortOrder == "asc" =>
+                    query.OrderBy(product => product.StockQuantity),
+
+                "stockquantity" =>
+                    query.OrderByDescending(product => product.StockQuantity),
+
+                _ when sortOrder == "asc" =>
+                    query.OrderBy(product => product.Name),
+
+                _ =>
+                    query.OrderByDescending(product => product.Name)
+            };
+
+            items = await orderedQuery
+                .ThenBy(product => product.Id)
+                .Include(product => product.Category)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+        }
 
         return new PagedResult<Product>
         {
