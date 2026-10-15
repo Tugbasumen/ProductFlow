@@ -6,8 +6,11 @@ namespace ProductFlow.Application.Interfaces;
 
 public interface IProductService
 {
-    Task<IReadOnlyList<Product>> GetAllAsync(
-        CancellationToken cancellationToken = default);
+    Task<PagedResult<Product>> GetAllAsync(
+    Guid? categoryId = null,
+    int page = 1,
+    int pageSize = 10,
+    CancellationToken cancellationToken = default);
 
     Task<Product?> GetByIdAsync(
         Guid id,

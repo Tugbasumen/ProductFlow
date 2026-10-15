@@ -1,7 +1,8 @@
-
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http.Json;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,9 +45,166 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
     }
 
     [Fact]
+    public async Task GetAll_WithCategoryId_ReturnsOnlyProductsInThatCategory()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        var categoryId = await GetTestCategoryIdAsync();
+
+        using var client = _factory.CreateClient();
+
+        var firstRequest = new
+        {
+            Code = "FILTER-001",
+            Name = "Kategori Filtre Mouse",
+            Description = "Filtre testi",
+            Price = 100m,
+            StockQuantity = 5,
+            CategoryId = categoryId
+        };
+
+        var secondRequest = new
+        {
+            Code = "FILTER-002",
+            Name = "Kategori Filtre Klavye",
+            Description = "Filtre testi",
+            Price = 200m,
+            StockQuantity = 10,
+            CategoryId = categoryId
+        };
+
+        var firstCreateResponse = await client.PostAsJsonAsync(
+            "/api/products", firstRequest);
+
+        var secondCreateResponse = await client.PostAsJsonAsync(
+            "/api/products", secondRequest);
+
+        Assert.Equal(HttpStatusCode.Created, firstCreateResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, secondCreateResponse.StatusCode);
+
+        var response = await client.GetAsync(
+            $"/api/products?categoryId={categoryId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var products = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(products);
+        Assert.Contains(products.Items, p => p.Code == "FILTER-001");
+        Assert.Contains(products.Items, p => p.Code == "FILTER-002");
+        Assert.All(
+            products.Items,
+            p => Assert.Equal(categoryId, p.CategoryId));
+
+        Assert.Equal(2, products.TotalCount);
+    }
+
+    [Fact]
+    public async Task GetAll_WithUnknownCategoryId_ReturnsEmptyList()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var unknownCategoryId = Guid.NewGuid();
+
+        var response = await client.GetAsync(
+            $"/api/products?categoryId={unknownCategoryId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var products = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(products);
+        Assert.Empty(products.Items);
+        Assert.Equal(0, products.TotalCount);
+        Assert.Equal(0, products.TotalPages);
+    }
+    [Fact]
+    public async Task GetAll_WithPageSize_ReturnsPaginationMetadata()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/products?page=1&pageSize=2");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await response.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Page);
+        Assert.Equal(2, result.PageSize);
+        Assert.True(result.Items.Count <= 2);
+        Assert.True(result.TotalCount >= result.Items.Count);
+        Assert.Equal(
+            (int)Math.Ceiling((double)result.TotalCount / result.PageSize),
+            result.TotalPages);
+    }
+
+    [Fact]
+    public async Task GetAll_WithInvalidPage_ReturnsBadRequest()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync(
+            "/api/products?page=0&pageSize=10");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+    [Fact]
+    public async Task GetAll_WithSecondPage_ReturnsRequestedPage()
+    {
+        await _factory.InitializeDatabaseAsync();
+
+        using var client = _factory.CreateClient();
+
+        var firstResponse = await client.GetAsync(
+            "/api/products?page=1&pageSize=1");
+
+        var secondResponse = await client.GetAsync(
+            "/api/products?page=2&pageSize=1");
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
+
+        var firstPage = await firstResponse.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        var secondPage = await secondResponse.Content
+            .ReadFromJsonAsync<PagedProductResponse>();
+
+        Assert.NotNull(firstPage);
+        Assert.NotNull(secondPage);
+
+        Assert.Equal(1, firstPage.Page);
+        Assert.Equal(2, secondPage.Page);
+        Assert.Equal(1, firstPage.PageSize);
+        Assert.Equal(1, secondPage.PageSize);
+
+        if (firstPage.TotalCount >= 2)
+        {
+            Assert.Single(firstPage.Items);
+            Assert.Single(secondPage.Items);
+
+            Assert.NotEqual(
+                firstPage.Items[0].Code,
+                secondPage.Items[0].Code);
+        }
+    }
+
+    [Fact]
     public async Task CreateProduct_WithValidRequest_ReturnsCreated()
     {
         await _factory.InitializeDatabaseAsync();
+
         var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
@@ -61,7 +219,8 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             CategoryId = categoryId
         };
 
-        var response = await client.PostAsJsonAsync("/api/products", request);
+        var response = await client.PostAsJsonAsync(
+            "/api/products", request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.NotNull(response.Headers.Location);
@@ -71,6 +230,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
     public async Task GetById_WhenProductExists_ReturnsProduct()
     {
         await _factory.InitializeDatabaseAsync();
+
         var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
@@ -107,14 +267,6 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
         Assert.Equal(5, product.StockQuantity);
     }
 
-    private sealed class ProductResponse
-    {
-        public string Code { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public decimal Price { get; set; }
-        public int StockQuantity { get; set; }
-    }
-
     [Fact]
     public async Task GetById_WhenProductDoesNotExist_ReturnsNotFound()
     {
@@ -134,6 +286,7 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
     public async Task CreateProduct_WithDuplicateCode_ReturnsConflict()
     {
         await _factory.InitializeDatabaseAsync();
+
         var categoryId = await GetTestCategoryIdAsync();
 
         using var client = _factory.CreateClient();
@@ -233,5 +386,36 @@ public class ProductsApiTests : IClassFixture<ProductApiFactory>
             "/api/products", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    private sealed class FilteredProductResponse
+    {
+        public Guid CategoryId { get; set; }
+
+        public string Code { get; set; } = string.Empty;
+    }
+
+    private sealed class PagedProductResponse
+    {
+        public List<FilteredProductResponse> Items { get; set; } = [];
+
+        public int Page { get; set; }
+
+        public int PageSize { get; set; }
+
+        public int TotalCount { get; set; }
+
+        public int TotalPages { get; set; }
+    }
+
+    private sealed class ProductResponse
+    {
+        public string Code { get; set; } = string.Empty;
+
+        public string Name { get; set; } = string.Empty;
+
+        public decimal Price { get; set; }
+
+        public int StockQuantity { get; set; }
     }
 }

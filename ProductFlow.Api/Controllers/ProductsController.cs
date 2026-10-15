@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Mvc;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Exceptions;
@@ -18,10 +19,34 @@ public class ProductsController : ControllerBase
 
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        CancellationToken cancellationToken)
+        [FromQuery] Guid? categoryId,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        CancellationToken cancellationToken = default)
     {
-        var products = await _productService.GetAllAsync(cancellationToken);
-        return Ok(products);
+        if (page < 1)
+        {
+            return BadRequest(new
+            {
+                message = "Sayfa numarası en az 1 olmalıdır."
+            });
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new
+            {
+                message = "Sayfa boyutu 1 ile 100 arasında olmalıdır."
+            });
+        }
+
+        var result = await _productService.GetAllAsync(
+            categoryId,
+            page,
+            pageSize,
+            cancellationToken);
+
+        return Ok(result);
     }
 
     [HttpGet("{id:guid}")]
@@ -127,5 +152,4 @@ public class ProductsController : ControllerBase
 
         return NoContent();
     }
-
 }
