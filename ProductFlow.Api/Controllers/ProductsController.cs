@@ -78,6 +78,16 @@ public class ProductsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("critical-stock")]
+    public async Task<IActionResult> GetCriticalStock(
+        CancellationToken cancellationToken)
+    {
+        var products = await _productService.GetCriticalStockAsync(
+            cancellationToken);
+
+        return Ok(products);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(
         Guid id,

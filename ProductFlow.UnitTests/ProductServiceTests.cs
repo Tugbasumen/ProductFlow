@@ -18,6 +18,13 @@ public class ProductServiceTests
         return new ProductFlowDbContext(options);
     }
 
+    private static ProductService CreateService(ProductFlowDbContext dbContext)
+    {
+        return new ProductService(
+            dbContext,
+            new StockMovementService(dbContext));
+    }
+
     private static Category CreateCategory()
     {
         return new Category("Test Kategorisi", "Test açıklaması");
@@ -27,7 +34,7 @@ public class ProductServiceTests
     public async Task GetByIdAsync_WhenProductDoesNotExist_ReturnsNull()
     {
         using var dbContext = CreateDbContext();
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var result = await service.GetByIdAsync(Guid.NewGuid());
 
@@ -42,7 +49,7 @@ public class ProductServiceTests
         dbContext.Categories.Add(category);
         await dbContext.SaveChangesAsync();
 
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var request = new CreateProductRequest
         {
@@ -68,7 +75,7 @@ public class ProductServiceTests
     public async Task UpdateAsync_WhenProductDoesNotExist_ReturnsFalse()
     {
         using var dbContext = CreateDbContext();
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var request = new UpdateProductRequest
         {
@@ -86,7 +93,7 @@ public class ProductServiceTests
     public async Task AdjustStockAsync_WhenProductDoesNotExist_ReturnsFalse()
     {
         using var dbContext = CreateDbContext();
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var result = await service.AdjustStockAsync(Guid.NewGuid(), 5);
 
@@ -106,7 +113,7 @@ public class ProductServiceTests
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync();
 
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.AdjustStockAsync(product.Id, -5));
@@ -116,7 +123,7 @@ public class ProductServiceTests
     public async Task DeactivateAsync_WhenProductDoesNotExist_ReturnsFalse()
     {
         using var dbContext = CreateDbContext();
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var result = await service.DeactivateAsync(Guid.NewGuid());
 
@@ -136,7 +143,7 @@ public class ProductServiceTests
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync();
 
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
         var result = await service.AdjustStockAsync(product.Id, 5);
 
         Assert.True(result);
@@ -156,7 +163,7 @@ public class ProductServiceTests
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync();
 
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
         var result = await service.DeactivateAsync(product.Id);
 
         Assert.True(result);
@@ -176,7 +183,7 @@ public class ProductServiceTests
         dbContext.Products.Add(product);
         await dbContext.SaveChangesAsync();
 
-        var service = new ProductService(dbContext);
+        var service = CreateService(dbContext);
 
         var request = new UpdateProductRequest
         {

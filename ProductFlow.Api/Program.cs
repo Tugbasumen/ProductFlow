@@ -10,6 +10,7 @@ options.UseSqlServer(
 builder.Configuration.GetConnectionString("ProductFlowDatabase")));
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IStockMovementService, StockMovementService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

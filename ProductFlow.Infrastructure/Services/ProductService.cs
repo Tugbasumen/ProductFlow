@@ -15,10 +15,14 @@ namespace ProductFlow.Infrastructure.Services;
 public sealed class ProductService : IProductService
 {
     private readonly ProductFlowDbContext _dbContext;
+    private readonly IStockMovementService _stockMovementService;
 
-    public ProductService(ProductFlowDbContext dbContext)
+    public ProductService(
+        ProductFlowDbContext dbContext,
+        IStockMovementService stockMovementService)
     {
         _dbContext = dbContext;
+        _stockMovementService = stockMovementService;
     }
 
     public async Task<PagedResult<Product>> GetAllAsync(
@@ -190,7 +194,8 @@ public sealed class ProductService : IProductService
             request.Price,
             request.StockQuantity,
             request.CategoryId,
-            request.Description);
+            request.Description,
+            request.MinimumStockLevel);
 
         _dbContext.Products.Add(product);
 
@@ -216,6 +221,12 @@ public sealed class ProductService : IProductService
             request.Description,
             request.Price);
 
+        if (request.MinimumStockLevel.HasValue)
+        {
+            product.UpdateMinimumStockLevel(
+                request.MinimumStockLevel.Value);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
@@ -226,18 +237,44 @@ public sealed class ProductService : IProductService
         int quantityChange,
         CancellationToken cancellationToken = default)
     {
-        var product = await GetByIdAsync(id, cancellationToken);
-
-        if (product is null)
+        if (quantityChange == 0)
         {
-            return false;
+            throw new ArgumentOutOfRangeException(
+                nameof(quantityChange),
+                "Stok değişimi sıfır olamaz.");
         }
 
-        product.AdjustStock(quantityChange);
+        var type = quantityChange > 0
+            ? StockMovementType.In
+            : StockMovementType.Out;
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        var quantity = (int)Math.Abs((long)quantityChange);
 
-        return true;
+        var result = await _stockMovementService.CreateAsync(
+            new CreateStockMovementRequest
+            {
+                ProductId = id,
+                Type = type,
+                Quantity = quantity,
+                Description = "Ürün stok güncellemesi"
+            },
+            cancellationToken);
+
+        return result is not null;
+    }
+
+    public async Task<IReadOnlyList<Product>> GetCriticalStockAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Products
+            .AsNoTracking()
+            .Include(product => product.Category)
+            .Where(product =>
+                product.IsActive &&
+                product.StockQuantity <= product.MinimumStockLevel)
+            .OrderBy(product => product.StockQuantity)
+            .ThenBy(product => product.Name)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<bool> DeactivateAsync(

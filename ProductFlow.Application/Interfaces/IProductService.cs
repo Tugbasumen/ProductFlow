@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using ProductFlow.Application.DTOs;
@@ -36,5 +37,8 @@ public interface IProductService
 
     Task<bool> DeactivateAsync(
         Guid id,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Product>> GetCriticalStockAsync(
         CancellationToken cancellationToken = default);
 }

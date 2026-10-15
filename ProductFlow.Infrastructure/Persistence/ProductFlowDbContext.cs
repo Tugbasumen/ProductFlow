@@ -14,6 +14,7 @@ public class ProductFlowDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
 
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<StockMovement> StockMovements => Set<StockMovement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +36,9 @@ public class ProductFlowDbContext : DbContext
             entity.HasIndex(p => p.Code)
                 .IsUnique();
 
+            entity.Property(p => p.MinimumStockLevel)
+                .HasDefaultValue(5);
+
             entity.HasOne(p => p.Category)
                 .WithMany()
                 .HasForeignKey(p => p.CategoryId)
@@ -55,5 +59,33 @@ public class ProductFlowDbContext : DbContext
             entity.HasIndex(category => category.Name)
                 .IsUnique();
         });
+        modelBuilder.Entity<StockMovement>(entity =>
+{
+    entity.HasKey(movement => movement.Id);
+
+    entity.Property(movement => movement.Type)
+        .HasConversion<int>()
+        .IsRequired();
+
+    entity.Property(movement => movement.Quantity)
+        .IsRequired();
+
+    entity.Property(movement => movement.Description)
+        .HasMaxLength(500);
+
+    entity.Property(movement => movement.CreatedAtUtc)
+        .IsRequired();
+
+    entity.HasOne(movement => movement.Product)
+        .WithMany()
+        .HasForeignKey(movement => movement.ProductId)
+        .OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasIndex(movement => new
+    {
+        movement.ProductId,
+        movement.CreatedAtUtc
+    });
+});
     }
 }

@@ -22,6 +22,9 @@ public sealed class CreateProductRequest
     [Range(0, int.MaxValue)]
     public int StockQuantity { get; init; }
 
+    [Range(0, int.MaxValue)]
+    public int MinimumStockLevel { get; init; } = 5;
+
     [Required]
     public Guid CategoryId { get; init; }
 }

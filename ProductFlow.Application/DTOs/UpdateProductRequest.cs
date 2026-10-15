@@ -13,4 +13,7 @@ public sealed class UpdateProductRequest
 
     [Range(0, 9999999999999999.99)]
     public decimal Price { get; init; }
+
+    [Range(0, int.MaxValue)]
+    public int? MinimumStockLevel { get; init; }
 }
