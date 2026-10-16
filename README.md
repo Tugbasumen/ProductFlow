@@ -1,136 +1,115 @@
 # ProductFlow
 
-ProductFlow, ürün ve stok yönetimi süreçlerini yönetmek için geliştirilen ASP.NET Core Web API projesidir. Proje; katmanlı mimari, REST API tasarımı, Entity Framework Core, otomatik testler ve CI süreçlerini uygulamalı olarak geliştirmek amacıyla oluşturulmaktadır.
+ProductFlow, küçük ve orta ölçekli işletmeler için ürün kataloğu, stok hareketi, müşteri ve sipariş süreçlerini tek bir uygulamada birleştiren full-stack envanter yönetimi projesidir.
 
-## Teknolojiler
+## Özellikler
 
-- C# ve .NET 8
-- ASP.NET Core Web API
-- Entity Framework Core 8
-- Microsoft SQL Server
-- Swagger / OpenAPI
-- xUnit
-- SQLite ve EF Core InMemory ile testler
-- GitHub Actions
+- Ürünleri kategoriye göre yönetme; arama, sıralama ve sayfalama
+- Stok giriş/çıkış hareketlerini kayıt altına alma ve kritik stokları izleme
+- Müşteri oluşturma, güncelleme ve pasife alma
+- Çok kalemli sipariş oluşturma, onaylama ve iptal etme
+- Sipariş iptalinde stokları transaction içinde geri yükleme
+- ASP.NET Core API ve React/TypeScript dashboard
+- API doğrulaması, merkezi hata yanıtları ve otomatik testler
+- JWT tabanlı authentication ve Admin/Manager/Operator rol politikaları
 
-## Mevcut özellikler
+## Teknoloji ve Mimari
 
-- Ürün oluşturma, listeleme ve detay görüntüleme
-- Ürün bilgilerini güncelleme
-- Stok miktarını artırma veya azaltma
-- Ürünü pasifleştirme
-- Ürün kodu benzersizliği kontrolü
-- İstek doğrulama ve standart hata yanıtları
-- Birim ve API entegrasyon testleri
-- GitHub Actions ile otomatik derleme ve test
+- **Backend:** C#, .NET 8, ASP.NET Core Web API
+- **Veri erişimi:** Entity Framework Core 8, SQL Server
+- **Frontend:** React 19, TypeScript, Vite
+- **Test:** xUnit, ASP.NET Core integration tests, SQLite/InMemory test veritabanları
+- **CI:** GitHub Actions ile .NET testleri ve frontend production build
+- **Çalıştırma:** Docker Compose
 
-## Mimari
+Çözüm katmanları:
 
-Çözüm, sorumlulukları ayrı katmanlara bölerek düzenlenmiştir:
-
-- **ProductFlow.Domain:** Temel iş varlıkları ve iş kuralları
-- **ProductFlow.Application:** DTO'lar, servis arayüzleri ve uygulama kuralları
-- **ProductFlow.Infrastructure:** Veritabanı erişimi ve servis uygulamaları
-- **ProductFlow.Api:** HTTP uç noktaları, Swagger ve hata yönetimi
-- **ProductFlow.UnitTests:** Birim ve API entegrasyon testleri
+- `ProductFlow.Domain`: varlıklar ve iş kuralları
+- `ProductFlow.Application`: DTO'lar ve servis arayüzleri
+- `ProductFlow.Infrastructure`: EF Core ve servis uygulamaları
+- `ProductFlow.Api`: REST uç noktaları, Swagger ve hata middleware'i
+- `ProductFlow.UnitTests`: birim ve API entegrasyon testleri
+- `client`: React dashboard
 
 ## Gereksinimler
 
 - .NET 8 SDK
-- Microsoft SQL Server
-- Git
+- Node.js 22 veya üzeri ve npm
+- Docker Desktop / Docker Compose
+- Migration komutları için `dotnet-ef` aracı
 
-## Kurulum ve çalıştırma
+## Hızlı Başlangıç
 
-1. Depoyu klonlayın:
+### Tek komutla tam uygulama (Docker)
 
-   ```bash
-   git clone https://github.com/Tugbasumen/ProductFlow.git
-   cd ProductFlow
-   ```
-
-2. `ProductFlow.Api/appsettings.json` dosyasındaki `ProductFlowDatabase` bağlantı ayarını kendi SQL Server ortamınıza göre düzenleyin.
-
-3. Paketleri geri yükleyin:
-
-   ```bash
-   dotnet restore
-   ```
-
-4. Veritabanı migration'larını uygulayın:
-
-   ```bash
-   dotnet ef database update --project ProductFlow.Infrastructure --startup-project ProductFlow.Api
-   ```
-
-5. API'yi çalıştırın:
-
-   ```bash
-   dotnet run --project ProductFlow.Api
-   ```
-
-6. Uygulama çalışırken konsolda belirtilen adres üzerinden Swagger arayüzüne erişin.
-
-### Docker ile çalıştırma
-
-Aynı ortamı hızlıca yeniden üretebilmek için Docker Compose kullanılabilir:
+`.env.example` dosyasını `.env` olarak kopyalayın ve tüm örnek değerleri kendinize ait güçlü parolalarla değiştirin. `.env` Git tarafından ignore edilir.
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-Bu komut:
+Compose SQL Server hazır olana kadar bekler; API açılışta migration'ları uygular ve bootstrap Admin hesabını oluşturur. React arayüzü <http://localhost>, API/Swagger ise <http://localhost:8080/swagger> adresindedir.
 
-- SQL Server konteynerini başlatır
-- API uygulamasını derleyip çalıştırır
-- `http://localhost:8080/swagger` adresinden Swagger erişimini açar
+### Yerel geliştirme
 
-Açık SQL Server bağlantı dizesi:
+Önce SQL Server'ı başlatıp veritabanını hazırlayın:
 
-```text
-Server=db;Database=ProductFlowDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
+```powershell
+docker compose --env-file .env up -d db
+dotnet user-secrets init --project ProductFlow.Api
+dotnet user-secrets set "ConnectionStrings:ProductFlowDatabase" "Server=localhost,1433;Database=ProductFlowDb;User Id=sa;Password=<SQL_PASSWORD>;TrustServerCertificate=True;" --project ProductFlow.Api
+dotnet user-secrets set "Jwt:SigningKey" "<at-least-32-random-bytes>" --project ProductFlow.Api
+dotnet user-secrets set "BootstrapAdmin:Email" "admin@example.com" --project ProductFlow.Api
+dotnet user-secrets set "BootstrapAdmin:Password" "<strong-password>" --project ProductFlow.Api
+dotnet run --project ProductFlow.Api --launch-profile http
 ```
 
-## API uç noktaları
+### React arayüzü
 
-| Metot | Uç nokta                        | Açıklama                   |
-| ----- | ------------------------------- | -------------------------- |
-| GET   | `/api/products`                 | Ürünleri listeler          |
-| GET   | `/api/products/{id}`            | Ürün detayını getirir      |
-| POST  | `/api/products`                 | Yeni ürün oluşturur        |
-| PUT   | `/api/products/{id}`            | Ürün bilgilerini günceller |
-| PATCH | `/api/products/{id}/stock`      | Stok miktarını değiştirir  |
-| PATCH | `/api/products/{id}/deactivate` | Ürünü pasifleştirir        |
+API `5218` portunda çalışırken, başka bir terminalde:
 
-## Testler
-
-Tüm testleri çalıştırmak için:
-
-```bash
-dotnet test
+```powershell
+cd client
+npm ci
+npm run dev
 ```
 
-Release modunda derlemek için:
+Arayüz: <http://localhost:5173>. İlk Admin hesabı yukarıda tanımladığınız e-posta ve parola ile giriş yapar; yeni kullanıcıları `POST /api/auth/users` üzerinden Admin rolüyle oluşturabilirsiniz.
 
-```bash
-dotnet build --configuration Release
+## Test ve Build
+
+Backend testleri:
+
+```powershell
+dotnet test ProductFlow.sln --configuration Release
 ```
 
-## Sürekli Entegrasyon (CI)
+Frontend testleri ve production build:
 
-GitHub Actions, `main` dalına yapılan push ve Pull Request işlemlerinde projeyi otomatik olarak derler ve testleri çalıştırır.
+```powershell
+cd client
+npm ci
+npm test
+npm run lint
+npm run build
+```
 
-İş akışı dosyası: `.github/workflows/dotnet-ci.yml`
+Her iki kontrol de GitHub Actions üzerinde push ve pull request sırasında çalışır.
 
-## Geliştirme yol haritası
+## Önemli API Uç Noktaları
 
-- Kategori yönetimi
-- Müşteri ve sipariş modülleri
-- İlişkisel veri modeli ve transaction yönetimi
-- Test kapsamının genişletilmesi
-- Docker ve React arayüzü
-- İleri aşamada Redis ve RabbitMQ
+| Alan | Uç noktalar |
+| --- | --- |
+| Kimlik | `POST /api/auth/login`, `GET /api/auth/me`, Admin: `POST /api/auth/users` |
+| Ürünler | `GET/POST /api/products`, `GET/PUT /api/products/{id}`, `PATCH /api/products/{id}/stock`, `PATCH /api/products/{id}/deactivate` |
+| Kategoriler | `GET/POST /api/categories`, `GET/PUT /api/categories/{id}`, `PATCH /api/categories/{id}/deactivate` |
+| Müşteriler | `GET/POST /api/customers`, `GET/PUT /api/customers/{id}`, `PATCH /api/customers/{id}/deactivate` |
+| Siparişler | `GET/POST /api/orders`, `GET /api/orders/{id}`, `PATCH /api/orders/{id}/confirm`, `PATCH /api/orders/{id}/cancel` |
+| Stok hareketleri | `GET/POST /api/stockmovements`, `GET /api/products/critical-stock` |
 
-## Durum
+## Geliştirme Notları
 
-Proje aktif olarak geliştirilmektedir. Yeni özellikler ve mimari iyileştirmeler aşamalı olarak eklenecektir.
+- Geliştirme veritabanı kimlik bilgilerini ve production sırlarını repoya eklemeyin; ortam değişkeni veya secret store kullanın.
+- Docker Compose için `.env.example` içindeki tüm placeholder değerleri değiştirin; özellikle SQL parolası, JWT signing key ve bootstrap Admin parolasını tekrar kullanmayın.
+- JWT signing key en az 32 byte olmalı; bootstrap admin parolası Identity kurallarını karşılamalıdır.
+- Üretim öncesi HTTPS termination, yedekleme, izleme ve rate limiting yapılandırılmalıdır.

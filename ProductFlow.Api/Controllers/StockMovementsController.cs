@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Interfaces;
 
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Admin,Manager,Operator")]
 [Route("api/[controller]")]
 public sealed class StockMovementsController : ControllerBase
 {

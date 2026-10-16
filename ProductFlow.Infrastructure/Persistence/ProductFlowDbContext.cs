@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using ProductFlow.Domain.Entities;
 
 namespace ProductFlow.Infrastructure.Persistence;
 
-public class ProductFlowDbContext : DbContext
+public class ProductFlowDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>
 {
     public ProductFlowDbContext(
         DbContextOptions<ProductFlowDbContext> options)

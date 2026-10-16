@@ -4,12 +4,18 @@ services:
     container_name: productflow-db
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "YourStrong!Passw0rd"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env}
       MSSQL_PID: "Developer"
     ports:
       - "1433:1433"
     volumes:
       - productflow_mssql:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
   api:
     build:
@@ -17,13 +23,26 @@ services:
       dockerfile: ProductFlow.Api/Dockerfile
     container_name: productflow-api
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
-      ConnectionStrings__ProductFlowDatabase: "Server=db;Database=ProductFlowDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;"
+      ConnectionStrings__ProductFlowDatabase: "Server=db;Database=ProductFlowDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;"
+      Jwt__SigningKey: ${PRODUCTFLOW_JWT_SIGNING_KEY:?Set PRODUCTFLOW_JWT_SIGNING_KEY in .env}
+      BootstrapAdmin__Email: ${PRODUCTFLOW_ADMIN_EMAIL:?Set PRODUCTFLOW_ADMIN_EMAIL in .env}
+      BootstrapAdmin__Password: ${PRODUCTFLOW_ADMIN_PASSWORD:?Set PRODUCTFLOW_ADMIN_PASSWORD in .env}
     ports:
       - "8080:8080"
+
+  web:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    depends_on:
+      - api
+    ports:
+      - "80:80"
 
 volumes:
   productflow_mssql:

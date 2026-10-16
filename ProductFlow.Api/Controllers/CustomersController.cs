@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Interfaces;
 
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public sealed class CustomersController : ControllerBase
 {
@@ -41,6 +43,7 @@ public sealed class CustomersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Create(
         CreateCustomerRequest request,
         CancellationToken cancellationToken)
@@ -67,6 +70,7 @@ public sealed class CustomersController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Update(
         Guid id,
         UpdateCustomerRequest request,
@@ -95,6 +99,7 @@ public sealed class CustomersController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/deactivate")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Deactivate(
         Guid id,
         CancellationToken cancellationToken)

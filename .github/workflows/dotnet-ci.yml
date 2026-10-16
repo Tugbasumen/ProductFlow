@@ -9,6 +9,35 @@
       - main
 
 jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository'yi indir
+        uses: actions/checkout@v4
+
+      - name: Node.js 22 kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Frontend paketlerini geri yükle
+        run: npm ci
+        working-directory: client
+
+      - name: Frontend testleri
+        run: npm test
+        working-directory: client
+
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: client
+
+      - name: Frontend production build
+        run: npm run build
+        working-directory: client
+
   build-and-test:
     runs-on: ubuntu-latest
     steps:

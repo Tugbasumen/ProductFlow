@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Interfaces;
 
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public sealed class OrdersController : ControllerBase
 {
@@ -43,6 +45,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager,Operator")]
     public async Task<IActionResult> Create(
         CreateOrderRequest request,
         CancellationToken cancellationToken)
@@ -77,6 +80,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/confirm")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Confirm(
         Guid id,
         CancellationToken cancellationToken)
@@ -99,6 +103,7 @@ public sealed class OrdersController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/cancel")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Cancel(
         Guid id,
         CancellationToken cancellationToken)

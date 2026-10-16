@@ -1,11 +1,13 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Interfaces;
 
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class CategoriesController : ControllerBase
 {
@@ -42,6 +44,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Create(
         CreateCategoryRequest request,
         CancellationToken cancellationToken)
@@ -68,6 +71,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Update(
         Guid id,
         UpdateCategoryRequest request,
@@ -96,6 +100,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/deactivate")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Deactivate(
         Guid id,
         CancellationToken cancellationToken)

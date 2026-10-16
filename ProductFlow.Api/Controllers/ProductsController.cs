@@ -1,5 +1,6 @@
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ProductFlow.Application.DTOs;
 using ProductFlow.Application.Exceptions;
 using ProductFlow.Application.Interfaces;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 namespace ProductFlow.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public class ProductsController : ControllerBase
 {
@@ -104,6 +106,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Create(
         CreateProductRequest request,
         CancellationToken cancellationToken)
@@ -130,6 +133,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
     public async Task<IActionResult> Update(
         Guid id,
         UpdateProductRequest request,
@@ -182,6 +186,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/deactivate")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Deactivate(
         Guid id,
         CancellationToken cancellationToken)
