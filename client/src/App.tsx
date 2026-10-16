@@ -257,7 +257,18 @@ function App() {
   ) => {
     const headers = new Headers(init.headers)
     if (token) headers.set('Authorization', `Bearer ${token}`)
-    return fetch(input, { ...init, headers })
+    return fetch(input, { ...init, headers }).then((response) => {
+      if (response.status === 401 && token) {
+        sessionStorage.removeItem('productflow.accessToken')
+        sessionStorage.removeItem('productflow.email')
+        sessionStorage.removeItem('productflow.roles')
+        setAccessToken(null)
+        setUserEmail('')
+        setUserRoles([])
+        setMessage('Oturum süresi doldu. Yeniden giriş yapın.')
+      }
+      return response
+    })
   }
 
   const fetchDashboard = async (
@@ -1162,6 +1173,7 @@ function App() {
                         </span>
                       </td>
                       <td>
+                        {canManage && (
                         <button
                           type="button"
                           className="small-button"
@@ -1169,6 +1181,7 @@ function App() {
                         >
                           Düzenle
                         </button>
+                        )}
                       </td>
                     </tr>
                   ))}

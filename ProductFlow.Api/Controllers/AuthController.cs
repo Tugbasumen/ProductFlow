@@ -65,8 +65,8 @@ public sealed class AuthController : ControllerBase
             Encoding.UTF8.GetBytes(_configuration["Jwt:SigningKey"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _configuration["Jwt:Issuer"] ?? "ProductFlow",
+            audience: _configuration["Jwt:Audience"] ?? "ProductFlow.Client",
             claims: claims,
             expires: expiresAt,
             signingCredentials: credentials);
@@ -138,12 +138,29 @@ public sealed class AuthController : ControllerBase
             return Problem("Kullanıcı rolü atanamadı.");
         }
 
-        return Created($"/api/auth/users/{user.Id}", new
+        return CreatedAtAction(nameof(GetUser), new { id = user.Id }, new
         {
             user.Id,
             user.Email,
             user.DisplayName,
             role = request.Role
+        });
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("users/{id:guid}")]
+    public async Task<IActionResult> GetUser(Guid id)
+    {
+        var user = await _userManager.FindByIdAsync(id.ToString());
+        if (user is null)
+            return NotFound();
+
+        return Ok(new
+        {
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            roles = await _userManager.GetRolesAsync(user)
         });
     }
 }

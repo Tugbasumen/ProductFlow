@@ -27,8 +27,6 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable(
             "Jwt__SigningKey",
             "integration-test-signing-key-must-be-at-least-32-bytes");
-        Environment.SetEnvironmentVariable("Jwt__Issuer", "ProductFlow.Tests");
-        Environment.SetEnvironmentVariable("Jwt__Audience", "ProductFlow.Tests");
         _connection = new SqliteConnection("Data Source=:memory:");
         _connection.Open();
     }
@@ -41,8 +39,6 @@ public sealed class ProductApiFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["Jwt:SigningKey"] = "integration-test-signing-key-must-be-at-least-32-bytes",
-                ["Jwt:Issuer"] = "ProductFlow.Tests",
-                ["Jwt:Audience"] = "ProductFlow.Tests"
             });
         });
 

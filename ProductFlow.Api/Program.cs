@@ -20,10 +20,16 @@ if (string.IsNullOrWhiteSpace(jwtSigningKey) || Encoding.UTF8.GetByteCount(jwtSi
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "ProductFlow";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "ProductFlow.Client";
+var databaseConnectionString = builder.Configuration.GetConnectionString("ProductFlowDatabase");
+if (!builder.Environment.IsEnvironment("Testing") &&
+    string.IsNullOrWhiteSpace(databaseConnectionString))
+{
+    throw new InvalidOperationException(
+        "ConnectionStrings:ProductFlowDatabase must be configured using User Secrets or environment variables.");
+}
 
 builder.Services.AddDbContext<ProductFlowDbContext>(options =>
-options.UseSqlServer(
-builder.Configuration.GetConnectionString("ProductFlowDatabase")));
+options.UseSqlServer(databaseConnectionString));
 builder.Services
     .AddIdentityCore<ApplicationUser>(options =>
     {

@@ -76,6 +76,12 @@ npm run dev
 
 Arayüz: <http://localhost:5173>. İlk Admin hesabı yukarıda tanımladığınız e-posta ve parola ile giriş yapar; yeni kullanıcıları `POST /api/auth/users` üzerinden Admin rolüyle oluşturabilirsiniz.
 
+Bootstrap parolasını daha sonra görmek için (JWT anahtarını göstermeden):
+
+```powershell
+dotnet user-secrets list --project ProductFlow.Api | Where-Object { $_ -like 'BootstrapAdmin:Password = *' }
+```
+
 ## Test ve Build
 
 Backend testleri:

@@ -5,5 +5,9 @@
 **/.git/
 **/.github/
 **/TestResults/
+**/node_modules/
+**/dist/
+.env
+.env.*
 Dockerfile*
 README.md

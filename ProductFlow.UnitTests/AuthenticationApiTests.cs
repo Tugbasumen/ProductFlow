@@ -53,6 +53,8 @@ public sealed class AuthenticationApiTests : IClassFixture<ProductApiFactory>
         Assert.Contains("Admin", result.Roles);
 
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(result.AccessToken);
+        Assert.Equal("ProductFlow", jwt.Issuer);
+        Assert.Contains("ProductFlow.Client", jwt.Audiences);
         Assert.Contains(jwt.Claims, claim => claim.Value == "Admin");
     }
 
@@ -72,6 +74,9 @@ public sealed class AuthenticationApiTests : IClassFixture<ProductApiFactory>
         });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        Assert.NotNull(response.Headers.Location);
+        var createdUserResponse = await client.GetAsync(response.Headers.Location);
+        Assert.Equal(HttpStatusCode.OK, createdUserResponse.StatusCode);
         using var scope = _factory.Services.CreateScope();
         var userManager = scope.ServiceProvider
             .GetRequiredService<UserManager<ApplicationUser>>();

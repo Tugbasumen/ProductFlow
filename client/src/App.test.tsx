@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -91,7 +91,7 @@ function mockApi() {
       return jsonResponse({ items: products, page, totalCount: 25, totalPages: 3 })
     }
     if (url === '/api/products?page=1&pageSize=100') {
-      return jsonResponse({ items: products, totalCount: products.length })
+      return jsonResponse({ items: products, totalCount: products.length, totalPages: 1 })
     }
     if (url === '/api/products/critical-stock') return jsonResponse([])
     if (url === '/api/categories') {
@@ -164,8 +164,9 @@ describe('ProductFlow dashboard', () => {
     await user.click(await screen.findByRole('button', { name: 'Siparişler' }))
     await user.selectOptions(screen.getByLabelText('Durum'), '2')
 
-    expect(screen.getByText('Mert Kaya')).toBeTruthy()
-    expect(screen.queryByText('Elif Demir')).toBeNull()
+    const orderList = document.querySelector<HTMLElement>('.order-list')!
+    expect(within(orderList).getByText('Mert Kaya')).toBeTruthy()
+    expect(within(orderList).queryByText('Elif Demir')).toBeNull()
   })
 
   it('filters stock movements by type', async () => {
@@ -177,6 +178,16 @@ describe('ProductFlow dashboard', () => {
 
     expect(screen.getByText('Receiving')).toBeTruthy()
     expect(screen.queryByText('Dispatch')).toBeNull()
+  })
+
+  it('hides product editing actions from Operators', async () => {
+    sessionStorage.setItem('productflow.roles', JSON.stringify(['Operator']))
+    const user = userEvent.setup()
+    render(<App />)
+
+    await user.click(await screen.findByRole('button', { name: 'Ürünler' }))
+
+    expect(screen.queryByRole('button', { name: 'Düzenle' })).toBeNull()
   })
 
   it('creates an order with multiple product lines', async () => {
